@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PostureAI Pro — browser-based biomechanics analytics using MediaPipe Pose. Real-time joint angles, ergonomic scoring, and session reports." />
+  <title>PostureAI Pro — Webcam Biomechanics Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── Accessibility skip link ─────────────────────────────── -->
+<a class="sr-only" href="#main">Skip to main content</a>
+
+<div class="app" id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="header" role="banner">
+    <div class="header-left">
+      <div class="logo-dot" aria-hidden="true"></div>
+      <div>
+        <div class="logo-text">Posture<span>AI</span> Pro</div>
+        <div class="logo-sub">Webcam Biomechanics Monitor</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="sitting-time" id="sittingTime" aria-live="polite"></span>
+      <div class="status-pill idle" id="statusPill" aria-live="polite">● idle</div>
+    </div>
+  </header>
+
+  <!-- ── Main Grid ───────────────────────────────────────────── -->
+  <main class="main-grid" id="main">
+
+    <!-- Camera feed -->
+    <section class="camera-section" aria-label="Live camera feed">
+      <div class="camera-idle" id="camIdle">
+        <div class="camera-idle-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M15 10l4.553-2.069A1 1 0 0121 8.87V15.13a1 1 0 01-1.447.899L15 14
+                     M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+          </svg>
+        </div>
+        <p>Click <strong>Start Monitoring</strong> to begin</p>
+      </div>
+
+      <video id="videoEl" playsinline autoplay muted
+             aria-label="Webcam video feed" style="display:none"></video>
+      <canvas id="canvasEl" aria-hidden="true" style="display:none"></canvas>
+
+      <!-- Live classification badge -->
+      <div class="posture-badge" id="postureBadge"
+           role="status" aria-live="polite" style="display:none">
+        Good posture
+      </div>
+
+      <!-- Issue tags overlay -->
+      <div class="issues-overlay" id="issuesOverlay"
+           aria-live="polite" style="display:none"></div>
+    </section>
+
+    <!-- ── Side Panel ─────────────────────────────────────────── -->
+    <aside class="panel" aria-label="Analytics panel">
+
+      <!-- Tabs -->
+      <nav class="panel-tabs" role="tablist" aria-label="Analytics tabs">
+        <button class="tab active" role="tab" aria-selected="true"
+                aria-controls="tabLive"    id="tabBtnLive"
+                onclick="switchTab('live')">Live</button>
+        <button class="tab" role="tab" aria-selected="false"
+                aria-controls="tabJoints"  id="tabBtnJoints"
+                onclick="switchTab('joints')">Joints</button>
+        <button class="tab" role="tab" aria-selected="false"
+                aria-controls="tabIssues"  id="tabBtnIssues"
+                onclick="switchTab('issues')">Issues</button>
+        <button class="tab" role="tab" aria-selected="false"
+                aria-controls="tabHistory" id="tabBtnHistory"
+                onclick="switchTab('history')">History</button>
+        <button class="tab" role="tab" aria-selected="false"
+                aria-controls="tabLog"     id="tabBtnLog"
+                onclick="switchTab('log')">Log</button>
+      </nav>
+
+      <!-- ── TAB: Live ─────────────────────────────────────── -->
+      <div class="panel-content" id="tabLive"
+           role="tabpanel" aria-labelledby="tabBtnLive">
+
+        <!-- Stats cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-val good" id="goodPct">—</div>
+            <div class="stat-label">Good posture</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val bad" id="badPct">—</div>
+            <div class="stat-label">Poor posture</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="sessionTime" style="color:var(--accent)">0:00</div>
+            <div class="stat-label">Session time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val" id="alertCount" style="color:var(--warn)">0</div>
+            <div class="stat-label">Alerts fired</div>
+          </div>
+        </div>
+
+        <!-- Score bar -->
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">
+            <span>Posture score</span>
+            <span id="scoreNum">—</span>
+          </div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="scoreFill"
+                 style="width:0%;background:var(--good)"
+                 role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+
+        <!-- Ergonomic score ring -->
+        <div class="ergo-section">
+          <div class="ergo-ring-wrap">
+            <div class="ergo-ring-container" id="ergoRing">
+              <svg class="ergo-ring-svg" viewBox="0 0 88 88" aria-hidden="true">
+                <circle class="ergo-ring-bg"  cx="44" cy="44" r="36"/>
+                <circle class="ergo-ring-arc" cx="44" cy="44" r="36"
+                        style="--ring-progress:0px;--ring-color:var(--good)"/>
+              </svg>
+              <div class="ergo-ring-center">
+                <div id="ergoScoreNum" style="font-size:22px;font-weight:800;
+                     font-family:var(--font-mono);color:var(--muted)">—</div>
+                <div class="ergo-ring-unit">/ 100</div>
+              </div>
+            </div>
+            <div class="ergo-ring-meta">
+              <h4>Ergonomic Score</h4>
+              <p>Shoulder · Head · Torso<br>Movement breaks</p>
+            </div>
+          </div>
+
+          <!-- Sub-component bars -->
+          <div class="ergo-sub-bars">
+            <div class="ergo-sub" id="ergoShoulders"></div>
+            <div class="ergo-sub" id="ergoHead"></div>
+            <div class="ergo-sub" id="ergoTorso"></div>
+            <div class="ergo-sub" id="ergoBreaks"></div>
+          </div>
+
+          <!-- Advice list -->
+          <div class="ergo-advice-list" id="ergoAdvice">
+            <div class="ergo-advice-item good">Start monitoring to generate advice</div>
+          </div>
+        </div>
+
+        <!-- In-session trend bars -->
+        <div class="score-bar-label" style="margin-top:8px">
+          <span>Session trend</span>
+        </div>
+        <div class="history-chart" id="historyChart">
+          <div class="empty-state" id="historyEmpty">Session trend appears here</div>
+        </div>
+      </div><!-- /tabLive -->
+
+      <!-- ── TAB: Joints ────────────────────────────────────── -->
+      <div class="panel-content" id="tabJoints"
+           role="tabpanel" aria-labelledby="tabBtnJoints" style="display:none">
+
+        <div class="angles-grid">
+          <div class="angle-card angle-neutral" id="angleNeck">
+            <div class="angle-label">Neck</div>
+            <div class="angle-val">—</div>
+            <div class="angle-tip">&gt;145° is healthy</div>
+          </div>
+          <div class="angle-card angle-neutral" id="angleTorso">
+            <div class="angle-label">Torso</div>
+            <div class="angle-val">—</div>
+            <div class="angle-tip">&gt;160° is healthy</div>
+          </div>
+          <div class="angle-card angle-neutral" id="angleShoulder">
+            <div class="angle-label">Shoulder tilt</div>
+            <div class="angle-val">—</div>
+            <div class="angle-tip">&lt;5° is healthy</div>
+          </div>
+          <div class="angle-card angle-neutral" id="angleElbow">
+            <div class="angle-label">Elbow</div>
+            <div class="angle-val">—</div>
+            <div class="angle-tip">90–120° is ideal</div>
+          </div>
+          <div class="angle-card angle-neutral" id="angleKnee">
+            <div class="angle-label">Knee</div>
+            <div class="angle-val">—</div>
+            <div class="angle-tip">85–100° seated</div>
+          </div>
+        </div>
+
+        <div class="angles-note">
+          Angles calculated from MediaPipe landmarks using the
+          dot-product cosine formula: θ = arccos(BA·BC / |BA||BC|).
+          Values update live every inference frame (~30 fps).
+          Green = within healthy range · Red = outside range.
+        </div>
+      </div><!-- /tabJoints -->
+
+      <!-- ── TAB: Issues ────────────────────────────────────── -->
+      <div class="panel-content" id="tabIssues"
+           role="tabpanel" aria-labelledby="tabBtnIssues" style="display:none">
+        <div class="issue-list" id="issueList">
+          <div class="empty-state">Start monitoring to see posture checks</div>
+        </div>
+      </div><!-- /tabIssues -->
+
+      <!-- ── TAB: History ───────────────────────────────────── -->
+      <div class="panel-content" id="tabHistory"
+           role="tabpanel" aria-labelledby="tabBtnHistory" style="display:none">
+
+        <div class="history-header">
+          <h4>Past Sessions</h4>
+          <button class="btn-sm" onclick="clearHistory()">Clear all</button>
+        </div>
+        <div class="saved-sessions" id="savedSessions">
+          <div class="empty-state">Complete a session to see history here.</div>
+        </div>
+      </div><!-- /tabHistory -->
+
+      <!-- ── TAB: Log ───────────────────────────────────────── -->
+      <div class="panel-content" id="tabLog"
+           role="tabpanel" aria-labelledby="tabBtnLog" style="display:none">
+        <div class="session-log" id="sessionLog" aria-live="polite">
+          <div class="empty-state">Events will appear here</div>
+        </div>
+      </div><!-- /tabLog -->
+
+      <!-- ── Controls ──────────────────────────────────────── -->
+      <div class="controls" role="toolbar" aria-label="Monitor controls">
+        <button class="btn btn-start" id="btnStart"
+                onclick="startMonitor()" aria-label="Start posture monitoring">
+          ▶ Start Monitoring
+        </button>
+        <button class="btn btn-stop" id="btnStop"
+                onclick="stopMonitor()" aria-label="Stop monitoring" style="display:none">
+          ■ Stop
+        </button>
+        <button class="btn btn-reset" onclick="resetStats()"
+                title="Reset stats" aria-label="Reset statistics">↺</button>
+        <button class="btn btn-export" id="btnExport"
+                onclick="triggerExport()" aria-label="Export CSV report"
+                style="display:none">
+          ↓ Export CSV
+        </button>
+        <button class="btn btn-break" onclick="triggerBreak()"
+                title="Log a stretch break" aria-label="Log stretch break">
+          🧘 Break
+        </button>
+      </div>
+
+    </aside><!-- /panel -->
+  </main><!-- /main-grid -->
+
+  <!-- ── Footer ────────────────────────────────────────────── -->
+  <footer class="footer-bar" role="contentinfo">
+    <span class="footer-note">
+      Powered by MediaPipe Pose — all inference runs on-device · no data leaves your browser
+    </span>
+    <div class="sensitivity-wrap">
+      <label for="sensitivitySlider">Sensitivity</label>
+      <input type="range" min="1" max="5" value="3"
+             id="sensitivitySlider" step="1"
+             aria-label="Detection sensitivity" />
+      <span class="footer-note" id="sensitivityVal">3</span>
+    </div>
+  </footer>
+
+</div><!-- /app -->
+
+<!-- Alert banner (outside app for z-index stacking) -->
+<div class="alert-banner" id="alertBanner" role="alert" aria-live="assertive"></div>
+
+<!-- ── MediaPipe CDN ──────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js"
+        crossorigin="anonymous"></script>
+
+<!-- ── App Scripts (analytics must load before app) ─────── -->
+<script src="analytics.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
