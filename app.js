@@ -1,7 +1,6 @@
-/**
- * PostureAI Pro — Main Application
- * ──────────────────────────────────
- * Orchestrates:
+
+ 
+// Flow of the working
  *   • Webcam start / stop
  *   • MediaPipe Pose loading & inference
  *   • Skeleton rendering
@@ -10,7 +9,7 @@
  *   • Session persistence & history rendering
  *   • CSV export wiring
  *
- * Depends on: analytics.js  (must be loaded first)
+ * Depends on: analytics.js  
  */
 
 'use strict';
