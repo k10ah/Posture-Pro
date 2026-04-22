@@ -1,13 +1,4 @@
-/**
- * PostureAI Pro — Analytics Module
- * ─────────────────────────────────
- * Handles:
- *   • Joint angle calculations  (biomechanics-grade)
- *   • Posture classification    (descriptive labels)
- *   • Ergonomic score engine    (0–100)
- *   • CSV export                (session report)
- *   • Session persistence       (localStorage, last 10)
- *
+
  * MediaPipe Pose landmark indices used:
  *   0=nose  7=l-ear  8=r-ear  11=l-shoulder  12=r-shoulder
  *   13=l-elbow  14=r-elbow  15=l-wrist  16=r-wrist
